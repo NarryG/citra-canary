@@ -2,18 +2,16 @@
 
 Scroll down for the original README.md!
 
-Base revision: d26564d020460dd15f79b5e8e9229f2b99b6b50d
+Base revision: 9c7da35382eee98215ca19ef91dafae18d4d0c82
 
 |Pull Request|Commit|Title|Author|Merged?|
 |----|----|----|----|----|
 |[6](https://github.com/citra-emu/citra-canary/pull/6)|[d9c3e53](https://github.com/citra-emu/citra-canary/pull/6/files/)|Canary Base (MinGW Test)|[liushuyu](https://github.com/liushuyu)|Yes|
-|[5166](https://github.com/citra-emu/citra/pull/5166)|[e6e24d1](https://github.com/citra-emu/citra/pull/5166/files/)|Texture Filtering v2|[BreadFish64](https://github.com/BreadFish64)|Yes|
+|[5170](https://github.com/citra-emu/citra/pull/5170)|[4337307](https://github.com/citra-emu/citra/pull/5170/files/)|video_core/renderer_opengl/gl_rasterizer_cache: Create Format Reinterpretation Framework|[BreadFish64](https://github.com/BreadFish64)|Yes|
 |[5130](https://github.com/citra-emu/citra/pull/5130)|[ed51f06](https://github.com/citra-emu/citra/pull/5130/files/)|Show an error if CIA contend is encrypted|[B3n30](https://github.com/B3n30)|Yes|
 |[5123](https://github.com/citra-emu/citra/pull/5123)|[8e3960b](https://github.com/citra-emu/citra/pull/5123/files/)|SDL: Disable hidapi drivers due to compatibility problems with certain controllers|[vitor-k](https://github.com/vitor-k)|Yes|
-|[5117](https://github.com/citra-emu/citra/pull/5117)|[b4ac1c0](https://github.com/citra-emu/citra/pull/5117/files/)|citra_qt/system: Add N3DS mode checkbox and enable it by default|[FearlessTobi](https://github.com/FearlessTobi)|Yes|
 |[5108](https://github.com/citra-emu/citra/pull/5108)|[ab76b0b](https://github.com/citra-emu/citra/pull/5108/files/)|Load NCCHSecure2 keyX from native firm|[B3n30](https://github.com/B3n30)|Yes|
-|[5094](https://github.com/citra-emu/citra/pull/5094)|[8b07d85](https://github.com/citra-emu/citra/pull/5094/files/)|Option to hide mouse on inactivity|[vitor-k](https://github.com/vitor-k)|Yes|
-|[5083](https://github.com/citra-emu/citra/pull/5083)|[b87a15c](https://github.com/citra-emu/citra/pull/5083/files/)|video_core, citra_qt: Video dumping updates|[zhaowenlan1779](https://github.com/zhaowenlan1779)|Yes|
+|[5094](https://github.com/citra-emu/citra/pull/5094)|[e0796f1](https://github.com/citra-emu/citra/pull/5094/files/)|Option to hide mouse on inactivity|[vitor-k](https://github.com/vitor-k)|Yes|
 |[4908](https://github.com/citra-emu/citra/pull/4908)|[74c06bd](https://github.com/citra-emu/citra/pull/4908/files/)|Save states|[hamish-milne](https://github.com/hamish-milne)|Yes|
 
 
