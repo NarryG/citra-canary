@@ -7,6 +7,9 @@
 #include <fmt/format.h>
 #include "common/file_util.h"
 #include "core/cheats/cheats.h"
+
+#include <citra_qt/vanguard/UnmanagedWrapper.h>
+
 #include "core/cheats/gateway_cheat.h"
 #include "core/core.h"
 #include "core/core_timing.h"
@@ -18,6 +21,7 @@ constexpr u64 run_interval_ticks = BASE_CLOCK_RATE_ARM11 / 60;
 
 CheatEngine::CheatEngine(Core::System& system_) : system(system_) {
     LoadCheatFile();
+    LOG_ERROR(Core, "Registering cheat event");
     event = system.CoreTiming().RegisterEvent(
         "CheatCore::run_event",
         [this](u64 thread_id, s64 cycle_late) { RunCallback(thread_id, cycle_late); });
@@ -104,6 +108,8 @@ void CheatEngine::RunCallback([[maybe_unused]] u64 userdata, int cycles_late) {
             }
         }
     }
+    LOG_ERROR(Core, "Cheat ran");
+    UnmanagedWrapper::VANGUARD_CORESTEP();
     system.CoreTiming().ScheduleEvent(run_interval_ticks - cycles_late, event);
 }
 

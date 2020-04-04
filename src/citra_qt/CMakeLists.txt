@@ -160,7 +160,42 @@ add_executable(citra-qt
     util/spinbox.h
     util/util.cpp
     util/util.h
+    Vanguard/Helpers.hpp
+    Vanguard/VanguardClient.cpp
+    Vanguard/UnmanagedWrapper.cpp
+    Vanguard/UnmanagedWrapper2.cpp
 )
+
+file(GLOB CLR_FILES
+"Vanguard/Helpers.hpp"
+"Vanguard/VanguardClient.cpp"
+)
+
+SET_TARGET_PROPERTIES(citra-qt PROPERTIES LINK_FLAGS "/CLRTHREADATTRIBUTE:STA")
+
+set_source_files_properties(${CLR_FILES} PROPERTIES COMPILE_FLAGS "/clr /EHa  /Zc:twoPhase-")
+set_target_properties(citra-qt PROPERTIES VS_DOTNET_REFERENCES_COPY_LOCAL ON )
+set_target_properties(citra-qt PROPERTIES DOTNET_TARGET_FRAMEWORK_VERSION "v4.7.1")
+set_target_properties(citra-qt PROPERTIES VS_DOTNET_REFERENCE_CorruptCore "${PROJECT_SOURCE_DIR}/../../../RTCV/Build/CorruptCore.dll")
+set_target_properties(citra-qt PROPERTIES VS_DOTNET_REFERENCE_NetCore "${PROJECT_SOURCE_DIR}/../../../RTCV/Build/NetCore.dll")
+set_target_properties(citra-qt PROPERTIES VS_DOTNET_REFERENCE_RTCVCommon "${PROJECT_SOURCE_DIR}/../../../RTCV/Build/RTCV.Common.dll")
+set_target_properties(citra-qt PROPERTIES VS_DOTNET_REFERENCE_Vanguard "${PROJECT_SOURCE_DIR}/../../../RTCV/Build/Vanguard.dll")
+set_target_properties(citra-qt PROPERTIES VS_DOTNET_REFERENCES "System;System.Windows.Forms")
+string(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "/RTC(su|[1su])" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+# Narrysmod
+# Copy RTCV dlls and pdbs for easier dev purposes
+set (RTC_DLL_DIR "${PROJECT_SOURCE_DIR}/../../RTCV/Build/")
+file(GLOB rtcdlls RELATIVE "${RTC_DLL_DIR}" "${RTC_DLL_DIR}/*.dll")
+file(GLOB rtcpdbs RELATIVE "${RTC_DLL_DIR}" "${RTC_DLL_DIR}/*.pdb")
+
+foreach(dll ${rtcdlls})
+configure_file("${RTC_DLL_DIR}/${dll}" "${CMAKE_BINARY_DIR}/${dll}" COPYONLY)
+endforeach()
+
+foreach(pdb ${rtcpdbs})
+configure_file("${RTC_DLL_DIR}/${pdb}" "${CMAKE_BINARY_DIR}/${pdb}" COPYONLY)
+endforeach()
 
 if (ENABLE_FFMPEG_VIDEO_DUMPER)
     target_sources(citra-qt PRIVATE

@@ -84,6 +84,8 @@
 #include "game_list_p.h"
 #include "video_core/renderer_base.h"
 #include "video_core/video_core.h"
+#include "Vanguard/VanguardClientInitializer.h"
+#include "Vanguard/VanguardClient.h"
 
 #ifdef USE_DISCORD_PRESENCE
 #include "citra_qt/discord_impl.h"
@@ -190,8 +192,8 @@ GMainWindow::GMainWindow() : config(new Config()), emu_thread(nullptr) {
 #endif
     LOG_INFO(Frontend, "Host OS: {}", QSysInfo::prettyProductName().toStdString());
     UpdateWindowTitle();
-
     show();
+    VanguardClientInitializer::Initialize();
 
     game_list->LoadCompatibilityList();
     game_list->PopulateAsync(UISettings::values.game_dirs);
@@ -862,7 +864,7 @@ bool GMainWindow::LoadROM(const QString& filename) {
     }
 
     Core::System& system{Core::System::GetInstance()};
-
+    VanguardClientUnmanaged::LOAD_GAME_START(filename.toStdString());
     const Core::System::ResultStatus result{system.Load(*render_window, filename.toStdString())};
 
     if (result != Core::System::ResultStatus::Success) {
@@ -948,6 +950,7 @@ bool GMainWindow::LoadROM(const QString& filename) {
     game_path = filename;
 
     system.TelemetrySession().AddField(Telemetry::FieldType::App, "Frontend", "Qt");
+
     return true;
 }
 
@@ -1035,6 +1038,7 @@ void GMainWindow::BootGame(const QString& filename) {
         video_dumping_path.clear();
     }
     OnStartGame();
+    VanguardClientUnmanaged::LOAD_GAME_DONE();
 }
 
 void GMainWindow::ShutdownGame() {
@@ -1131,6 +1135,7 @@ void GMainWindow::ShutdownGame() {
 
     // When closing the game, destroy the GLWindow to clear the context after the game is closed
     render_window->ReleaseRenderTarget();
+    VanguardClientUnmanaged::GAME_CLOSED();
 }
 
 void GMainWindow::StoreRecentFile(const QString& filename) {
@@ -1481,6 +1486,11 @@ void GMainWindow::OnMenuRecentFile() {
         UISettings::values.recent_files.removeOne(filename);
         UpdateRecentFiles();
     }
+}
+
+
+void GMainWindow::SetEmuThread(bool running) {
+    emu_thread->SetRunning(running);
 }
 
 void GMainWindow::OnStartGame() {
