@@ -6,8 +6,14 @@
 
 #include <memory>
 #include <vector>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+#include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/vector.hpp>
 #include "common/common_types.h"
 #include "core/hle/kernel/object.h"
+#include "core/hle/kernel/thread.h"
 #include "core/hle/result.h"
 
 // Address arbiters are an underlying kernel synchronization object that can be created/used via
@@ -30,7 +36,7 @@ enum class ArbitrationType : u32 {
     DecrementAndWaitIfLessThanWithTimeout,
 };
 
-class AddressArbiter final : public Object {
+class AddressArbiter final : public Object, public WakeupCallback {
 public:
     explicit AddressArbiter(KernelSystem& kernel);
     ~AddressArbiter() override;
@@ -52,6 +58,9 @@ public:
     ResultCode ArbitrateAddress(std::shared_ptr<Thread> thread, ArbitrationType type, VAddr address,
                                 s32 value, u64 nanoseconds);
 
+    void WakeUp(ThreadWakeupReason reason, std::shared_ptr<Thread> thread,
+                std::shared_ptr<WaitObject> object);
+
 private:
     KernelSystem& kernel;
 
@@ -67,6 +76,17 @@ private:
 
     /// Threads waiting for the address arbiter to be signaled.
     std::vector<std::shared_ptr<Thread>> waiting_threads;
+
+    friend class boost::serialization::access;
+    template <class Archive>
+    void serialize(Archive& ar, const unsigned int file_version) {
+        ar& boost::serialization::base_object<Object>(*this);
+        ar& name;
+        ar& waiting_threads;
+    }
 };
 
 } // namespace Kernel
+
+BOOST_CLASS_EXPORT_KEY(Kernel::AddressArbiter)
+CONSTRUCT_KERNEL_OBJECT(Kernel::AddressArbiter)

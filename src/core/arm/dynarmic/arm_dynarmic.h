@@ -41,7 +41,7 @@ public:
     void SetVFPSystemReg(VFPSystemRegister reg, u32 value) override;
     u32 GetCPSR() const override;
     void SetCPSR(u32 cpsr) override;
-    u32 GetCP15Register(CP15Register reg) override;
+    u32 GetCP15Register(CP15Register reg) const override;
     void SetCP15Register(CP15Register reg, u32 value) override;
 
     std::unique_ptr<ThreadContext> NewContext() const override;
@@ -52,7 +52,11 @@ public:
 
     void ClearInstructionCache() override;
     void InvalidateCacheRange(u32 start_address, std::size_t length) override;
-    void PageTableChanged() override;
+    void SetPageTable(const std::shared_ptr<Memory::PageTable>& page_table) override;
+    void PurgeState() override;
+
+protected:
+    std::shared_ptr<Memory::PageTable> GetPageTable() const override;
 
 private:
     friend class DynarmicUserCallbacks;
@@ -62,7 +66,7 @@ private:
     std::unique_ptr<Dynarmic::A32::Jit> MakeJit();
 
     Dynarmic::A32::Jit* jit = nullptr;
-    Memory::PageTable* current_page_table = nullptr;
-    std::map<Memory::PageTable*, std::unique_ptr<Dynarmic::A32::Jit>> jits;
+    std::shared_ptr<Memory::PageTable> current_page_table = nullptr;
+    std::map<std::shared_ptr<Memory::PageTable>, std::unique_ptr<Dynarmic::A32::Jit>> jits;
     std::shared_ptr<ARMul_State> interpreter_state;
 };

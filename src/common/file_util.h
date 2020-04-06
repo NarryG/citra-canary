@@ -14,6 +14,8 @@
 #include <string_view>
 #include <type_traits>
 #include <vector>
+#include <boost/serialization/split_member.hpp>
+#include <boost/serialization/string.hpp>
 #include "common/common_types.h"
 #ifdef _MSC_VER
 #include "common/string_util.h"
@@ -34,6 +36,7 @@ enum class UserPath {
     RootDir,
     SDMCDir,
     ShaderDir,
+    StatesDir,
     SysDataDir,
     UserDir,
 };
@@ -137,9 +140,14 @@ bool SetCurrentDir(const std::string& directory);
 
 void SetUserPath(const std::string& path = "");
 
+void SetCurrentRomPath(const std::string& path);
+
 // Returns a pointer to a string with a Citra data dir in the user's home
 // directory. To be used in "multi-user" mode (that is, installed).
 const std::string& GetUserPath(UserPath path);
+
+// Replaces install-specific paths with standard placeholders, and back again
+std::string SerializePath(const std::string& input, bool is_saving);
 
 // Returns the path to where the sys file are
 std::string GetSysDirectory();
@@ -221,7 +229,6 @@ public:
 
     void Swap(IOFile& other) noexcept;
 
-    bool Open(const std::string& filename, const char openmode[], int flags = 0);
     bool Close();
 
     template <typename T>
@@ -305,8 +312,38 @@ public:
     }
 
 private:
+    bool Open();
+
     std::FILE* m_file = nullptr;
     bool m_good = true;
+
+    std::string filename;
+    std::string openmode;
+    u32 flags;
+
+    template <class Archive>
+    void save(Archive& ar, const unsigned int) const {
+        auto s_filename = SerializePath(filename, true);
+        ar << s_filename;
+        ar << openmode;
+        ar << flags;
+        ar << Tell();
+    }
+
+    template <class Archive>
+    void load(Archive& ar, const unsigned int) {
+        ar >> filename;
+        filename = SerializePath(filename, false);
+        ar >> openmode;
+        ar >> flags;
+        u64 pos;
+        ar >> pos;
+        Open();
+        Seek(pos, SEEK_SET);
+    }
+
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
+    friend class boost::serialization::access;
 };
 
 } // namespace FileUtil

@@ -6,10 +6,13 @@
 
 #include <cstddef>
 #include <memory>
+#include <boost/serialization/shared_ptr.hpp>
+#include <boost/serialization/split_member.hpp>
 #include "common/common_types.h"
 #include "core/arm/skyeye_common/arm_regformat.h"
 #include "core/arm/skyeye_common/vfp/asm_vfp.h"
 #include "core/core_timing.h"
+#include "core/memory.h"
 
 /// Generic ARM11 CPU interface
 class ARM_Interface : NonCopyable {
@@ -19,6 +22,46 @@ public:
     virtual ~ARM_Interface() {}
 
     class ThreadContext {
+        friend class boost::serialization::access;
+
+        template <class Archive>
+        void save(Archive& ar, const unsigned int file_version) const {
+            for (std::size_t i = 0; i < 16; i++) {
+                const auto r = GetCpuRegister(i);
+                ar << r;
+            }
+            for (std::size_t i = 0; i < 16; i++) {
+                const auto r = GetFpuRegister(i);
+                ar << r;
+            }
+            const auto r1 = GetCpsr();
+            ar << r1;
+            const auto r2 = GetFpscr();
+            ar << r2;
+            const auto r3 = GetFpexc();
+            ar << r3;
+        }
+
+        template <class Archive>
+        void load(Archive& ar, const unsigned int file_version) {
+            u32 r;
+            for (std::size_t i = 0; i < 16; i++) {
+                ar >> r;
+                SetCpuRegister(i, r);
+            }
+            for (std::size_t i = 0; i < 16; i++) {
+                ar >> r;
+                SetFpuRegister(i, r);
+            }
+            ar >> r;
+            SetCpsr(r);
+            ar >> r;
+            SetFpscr(r);
+            ar >> r;
+            SetFpexc(r);
+        }
+
+        BOOST_SERIALIZATION_SPLIT_MEMBER()
     public:
         virtual ~ThreadContext() = default;
 
@@ -73,7 +116,7 @@ public:
     virtual void InvalidateCacheRange(u32 start_address, std::size_t length) = 0;
 
     /// Notify CPU emulation that page tables have changed
-    virtual void PageTableChanged() = 0;
+    virtual void SetPageTable(const std::shared_ptr<Memory::PageTable>& page_table) = 0;
 
     /**
      * Set the Program Counter to an address
@@ -146,7 +189,7 @@ public:
      * @param reg The CP15 register to retrieve the value from.
      * @return the value stored in the given CP15 register.
      */
-    virtual u32 GetCP15Register(CP15Register reg) = 0;
+    virtual u32 GetCP15Register(CP15Register reg) const = 0;
 
     /**
      * Stores the given value into the indicated CP15 register.
@@ -176,6 +219,8 @@ public:
     /// Prepare core for thread reschedule (if needed to correctly handle state)
     virtual void PrepareReschedule() = 0;
 
+    virtual void PurgeState() = 0;
+
     std::shared_ptr<Core::Timing::Timer> GetTimer() {
         return timer;
     }
@@ -185,8 +230,74 @@ public:
     }
 
 protected:
+    // This us used for serialization. Returning nullptr is valid if page tables are not used.
+    virtual std::shared_ptr<Memory::PageTable> GetPageTable() const = 0;
+
     std::shared_ptr<Core::Timing::Timer> timer;
 
 private:
     u32 id;
+
+    friend class boost::serialization::access;
+
+    template <class Archive>
+    void save(Archive& ar, const unsigned int file_version) const {
+        ar << timer;
+        ar << id;
+        const auto page_table = GetPageTable();
+        ar << page_table;
+        for (int i = 0; i < 15; i++) {
+            const auto r = GetReg(i);
+            ar << r;
+        }
+        const auto pc = GetPC();
+        ar << pc;
+        const auto cpsr = GetCPSR();
+        ar << cpsr;
+        for (int i = 0; i < 32; i++) {
+            const auto r = GetVFPReg(i);
+            ar << r;
+        }
+        for (std::size_t i = 0; i < VFPSystemRegister::VFP_SYSTEM_REGISTER_COUNT; i++) {
+            const auto r = GetVFPSystemReg(static_cast<VFPSystemRegister>(i));
+            ar << r;
+        }
+        for (std::size_t i = 0; i < CP15Register::CP15_REGISTER_COUNT; i++) {
+            const auto r = GetCP15Register(static_cast<CP15Register>(i));
+            ar << r;
+        }
+    }
+
+    template <class Archive>
+    void load(Archive& ar, const unsigned int file_version) {
+        PurgeState();
+        ar >> timer;
+        ar >> id;
+        std::shared_ptr<Memory::PageTable> page_table{};
+        ar >> page_table;
+        SetPageTable(page_table);
+        u32 r;
+        for (int i = 0; i < 15; i++) {
+            ar >> r;
+            SetReg(i, r);
+        }
+        ar >> r;
+        SetPC(r);
+        ar >> r;
+        SetCPSR(r);
+        for (int i = 0; i < 32; i++) {
+            ar >> r;
+            SetVFPReg(i, r);
+        }
+        for (std::size_t i = 0; i < VFPSystemRegister::VFP_SYSTEM_REGISTER_COUNT; i++) {
+            ar >> r;
+            SetVFPSystemReg(static_cast<VFPSystemRegister>(i), r);
+        }
+        for (std::size_t i = 0; i < CP15Register::CP15_REGISTER_COUNT; i++) {
+            ar >> r;
+            SetCP15Register(static_cast<CP15Register>(i), r);
+        }
+    }
+
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
