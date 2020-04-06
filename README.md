@@ -1,3 +1,22 @@
+# Merge log
+
+Scroll down for the original README.md!
+
+Base revision: 3b1b8b7e1f69cd0c654026a0dfb49d80fdb027df
+
+|Pull Request|Commit|Title|Author|Merged?|
+|----|----|----|----|----|
+|[6](https://github.com/citra-emu/citra-canary/pull/6)|[d9c3e53](https://github.com/citra-emu/citra-canary/pull/6/files/)|Canary Base (MinGW Test)|[liushuyu](https://github.com/liushuyu)|Yes|
+|[5130](https://github.com/citra-emu/citra/pull/5130)|[ed51f06](https://github.com/citra-emu/citra/pull/5130/files/)|Show an error if CIA contend is encrypted|[B3n30](https://github.com/B3n30)|Yes|
+|[5108](https://github.com/citra-emu/citra/pull/5108)|[ab76b0b](https://github.com/citra-emu/citra/pull/5108/files/)|Load NCCHSecure2 keyX from native firm|[B3n30](https://github.com/B3n30)|Yes|
+|[5094](https://github.com/citra-emu/citra/pull/5094)|[e0796f1](https://github.com/citra-emu/citra/pull/5094/files/)|Option to hide mouse on inactivity|[vitor-k](https://github.com/vitor-k)|Yes|
+|[4908](https://github.com/citra-emu/citra/pull/4908)|[e74b440](https://github.com/citra-emu/citra/pull/4908/files/)|Save states|[hamish-milne](https://github.com/hamish-milne)|Yes|
+
+
+End of merge log. You can find the original README.md below the break.
+
+------
+
 **BEFORE FILING AN ISSUE, READ THE RELEVANT SECTION IN THE [CONTRIBUTING](https://github.com/citra-emu/citra/wiki/Contributing#reporting-issues) FILE!!!**
 
 Citra
