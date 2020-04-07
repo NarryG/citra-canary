@@ -12,7 +12,7 @@
 
 #include <msclr/marshal_cppstd.h>
 
-#include "UnmanagedWrapper.h"
+#include "vanguardwrapper/UnmanagedWrapper.h"
 
 //#include "core/core.h"
 #using < system.dll>
@@ -78,9 +78,12 @@ public:
     static array<String^>^ configPaths;
 
     static volatile bool loading = false;
+    static volatile bool stateLoading = false;
     static bool attached = false;
     static Object^ GenericLockObject = gcnew Object();
     static bool enableRTC = true;
+    static System::String ^ lastStateName = "";
+    static System::String ^ fileToCopy = "";
     //static Core::TimingEventType* event;
 };
 
@@ -116,7 +119,7 @@ getDefaultPartial() {
     partial->Set(VSPEC::MEMORYDOMAINS_BLACKLISTEDDOMAINS, gcnew array<String^>{""
                  });
     partial->Set(VSPEC::SYSTEM, String::Empty);
-    partial->Set(VSPEC::LOADSTATE_USES_CALLBACKS, false);
+    partial->Set(VSPEC::LOADSTATE_USES_CALLBACKS, true);
     partial->Set(VSPEC::EMUDIR, VanguardClient::emuDir);
     return partial;
 }
@@ -413,12 +416,6 @@ void VanguardClientUnmanaged::LOAD_GAME_START(std::string romPath) {
     AllSpec::VanguardSpec->Update(VSPEC::OPENROMFILENAME, gameName, true, true);
 }
 
-//constexpr u64 run_interval_ticks = BASE_CLOCK_RATE_ARM11 / 60;
-
-void VanguardClientUnmanaged::RunCallback([[maybe_unused]] u64 userdata, int cycles_late) {
-    VanguardClientUnmanaged::CORE_STEP();
-    // Core::System::GetInstance().CoreTiming().ScheduleEvent(run_interval_ticks - cycles_late, VanguardClient::event);
-}
 
 void VanguardClientUnmanaged::LOAD_GAME_DONE() {
     if (!VanguardClient::enableRTC)
@@ -426,14 +423,14 @@ void VanguardClientUnmanaged::LOAD_GAME_DONE() {
     PartialSpec^ gameDone = gcnew PartialSpec("VanguardSpec");
 
     try {
-        gameDone->Set(VSPEC::SYSTEM, "melonDS");
-        gameDone->Set(VSPEC::SYSTEMPREFIX, "melonDS");
-        gameDone->Set(VSPEC::SYSTEMCORE, "DS");
+        gameDone->Set(VSPEC::SYSTEM, "Citra");
+        gameDone->Set(VSPEC::SYSTEMPREFIX, "Citra");
+        gameDone->Set(VSPEC::SYSTEMCORE, "3DS");
         gameDone->Set(VSPEC::CORE_DISKBASED, false);
 
         String^ oldGame = AllSpec::VanguardSpec->Get<String^>(VSPEC::GAMENAME);
 
-        String^ gameName = VanguardClientUnmanaged::GAME_NAME.ToString();
+        String^ gameName = Helpers::utf8StringToSystemString(UnmanagedWrapper::VANGUARD_GETGAMENAME());
 
         char replaceChar = L'-';
         gameDone->Set(VSPEC::GAMENAME,
@@ -468,6 +465,12 @@ void VanguardClientUnmanaged::LOAD_GAME_DONE() {
 }
 
 
+void VanguardClientUnmanaged::LOAD_STATE_DONE() {
+    if (!VanguardClient::enableRTC)
+        return;
+    VanguardClient::stateLoading = false;
+}
+
 void VanguardClientUnmanaged::GAME_CLOSED() {
     if (!VanguardClient::enableRTC)
         return;
@@ -476,7 +479,6 @@ void VanguardClientUnmanaged::GAME_CLOSED() {
     RtcCore::GAME_CLOSED(true);
 }
 
-int VanguardClientUnmanaged::GAME_NAME = 1;
 
 bool VanguardClientUnmanaged::RTC_OSD_ENABLED() {
     if (!VanguardClient::enableRTC)
@@ -543,39 +545,67 @@ inline COMMANDS CheckCommand(String^ inString) {
 
 /* IMPLEMENT YOUR COMMANDS HERE */
 void VanguardClient::LoadRom(String^ filename) {
-    std::string path = Helpers::systemStringToUtf8String(filename);
-    loading = true;
+    String ^ currentOpenRom = "";
+    if (AllSpec::VanguardSpec->Get<String ^>(VSPEC::OPENROMFILENAME) != "")
+        currentOpenRom = AllSpec::VanguardSpec->Get<String ^>(VSPEC::OPENROMFILENAME);
 
-    // We have to do it this way to prevent deadlock due to synced calls. It sucks but it's required
-    // at the moment
-    while (loading) {
-        Thread::Sleep(20);
-        System::Windows::Forms::Application::DoEvents();
+    // Game is not running
+    if (currentOpenRom != filename) {
+        std::string path = Helpers::systemStringToUtf8String(filename);
+        loading = true;
+        UnmanagedWrapper::VANGUARD_LOADGAME(path);
+        // We have to do it this way to prevent deadlock due to synced calls. It sucks but it's
+        // required at the moment
+        while (loading) {
+            Thread::Sleep(20);
+            System::Windows::Forms::Application::DoEvents();
+        }
+
+        Thread::Sleep(10); // Give the emu thread a chance to recover
     }
-
-    Thread::Sleep(10); // Give the emu thread a chance to recover
-    return;
 }
 
 bool VanguardClient::LoadState(std::string filename) {
     StepActions::ClearStepBlastUnits();
+    CPU_STEP_Count = 0;
+    stateLoading = true;
     UnmanagedWrapper::VANGUARD_LOADSTATE(filename);
+    // We have to do it this way to prevent deadlock due to synced calls. It sucks but it's required
+    // at the moment
+    int i = 0;
+    do {
+        Thread::Sleep(20);
+        System::Windows::Forms::Application::DoEvents();
+
+        // We wait for 20 ms every time. If loading a game takes longer than 10 seconds, break out.
+        if (++i > 500) {
+            stateLoading = false;
+            return false;
+        }
+    } while (stateLoading);
     RefreshDomains();
     return true;
 }
 
-bool VanguardClient::SaveState(String^ filename, bool wait) {
+bool VanguardClient::SaveState(String ^ filename, bool wait) {
     std::string s = Helpers::systemStringToUtf8String(filename);
     const char* converted_filename = s.c_str();
-    UnmanagedWrapper::VANGUARD_SAVESTATE(s);
+    VanguardClient::lastStateName = filename;
+    VanguardClient::fileToCopy = Helpers::utf8StringToSystemString(UnmanagedWrapper::VANGUARD_SAVESTATE(s));
     return true;
 }
 
+void VanguardClientUnmanaged::SAVE_STATE_DONE() {
+    if (!VanguardClient::enableRTC)
+        return;
+    Thread::Sleep(1000);
+    System::IO::File::Copy(VanguardClient::fileToCopy, VanguardClient::lastStateName);
+}
 
 // No fun anonymous classes with closure here
 #pragma region Delegates
 void StopGame() {
-    //Stop(false);
+    UnmanagedWrapper::VANGUARD_STOPGAME();
 }
 
 void Quit() {
@@ -628,7 +658,7 @@ void VanguardClient::OnMessageReceived(Object^ sender, NetCoreEventArgs^ e) {
         String^ quickSlotName = Key + ".timejump";
         // Get the prefix for the state
 
-        String^ gameName = VanguardClientUnmanaged::GAME_NAME.ToString();
+        String ^ gameName = Helpers::utf8StringToSystemString(UnmanagedWrapper::VANGUARD_GETGAMENAME());
 
         char replaceChar = L'-';
         String^ prefix = CorruptCore_Extensions::MakeSafeFilename(gameName, replaceChar);
@@ -650,15 +680,15 @@ void VanguardClient::OnMessageReceived(Object^ sender, NetCoreEventArgs^ e) {
 
     case REMOTE_LOADROM: {
         String^ filename = (String^)advancedMessage->objectValue;
-        //Dolphin DEMANDS the rom is loaded from the main thread
-        //    System::Action<String^>^a = gcnew Action<String^>(&LoadRom);
-        //    SyncObjectSingleton::FormExecute<String ^>(a, filename);
+        //Citra DEMANDS the rom is loaded from the main thread
+        System::Action<String^>^a = gcnew Action<String^>(&LoadRom);
+        SyncObjectSingleton::FormExecute<String ^>(a, filename);
     }
     break;
 
     case REMOTE_CLOSEGAME: {
-        //SyncObjectSingleton::GenericDelegate ^ g = gcnew SyncObjectSingleton::GenericDelegate(&StopGame);
-        //SyncObjectSingleton::FormExecute(g);
+        SyncObjectSingleton::GenericDelegate ^ g = gcnew SyncObjectSingleton::GenericDelegate(&StopGame);
+        SyncObjectSingleton::FormExecute(g);
     }
     break;
 

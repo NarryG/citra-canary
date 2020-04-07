@@ -96,8 +96,6 @@ else()
 endif()
 
 add_subdirectory(common)
-add_subdirectory(vanguard)
-add_subdirectory(vanguardwrapper)
 add_subdirectory(core)
 add_subdirectory(video_core)
 add_subdirectory(audio_core)
@@ -117,6 +115,9 @@ if (ANDROID)
 else()
     add_subdirectory(dedicated_room)
 endif()
+
+add_subdirectory(vanguard)
+add_subdirectory(vanguardwrapper)
 
 if (ENABLE_WEB_SERVICE)
     add_subdirectory(web_service)

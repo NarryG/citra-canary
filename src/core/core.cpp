@@ -24,6 +24,8 @@
 #ifdef ENABLE_FFMPEG_VIDEO_DUMPER
 #include "core/dumping/ffmpeg_backend.h"
 #endif
+#include <vanguardwrapper/UnmanagedWrapper.h>
+
 #include "core/custom_tex_cache.h"
 #include "core/gdbstub/gdbstub.h"
 #include "core/global.h"
@@ -182,12 +184,14 @@ System::ResultStatus System::RunLoop(bool tight_loop) {
     case Signal::Load: {
         LOG_INFO(Core, "Begin load");
         System::LoadState(param);
+        UnmanagedWrapper::VANGUARD_LOADSTATE_DONE();
         LOG_INFO(Core, "Load completed");
         break;
     }
     case Signal::Save: {
         LOG_INFO(Core, "Begin save");
         System::SaveState(param);
+        UnmanagedWrapper::VANGUARD_SAVESTATE_DONE();
         LOG_INFO(Core, "Save completed");
         break;
     }

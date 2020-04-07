@@ -8,7 +8,7 @@
 #include "common/file_util.h"
 #include "core/cheats/cheats.h"
 
-#include <citra_qt/vanguard/UnmanagedWrapper.h>
+#include <vanguardwrapper/UnmanagedWrapper.h>
 
 #include "core/cheats/gateway_cheat.h"
 #include "core/core.h"
@@ -112,7 +112,6 @@ void CheatEngine::RunCallback([[maybe_unused]] u64 userdata, int cycles_late) {
             }
         }
     }
-    LOG_ERROR(Core, "Cheat ran");
     UnmanagedWrapper::VANGUARD_CORESTEP();
     system.CoreTiming().ScheduleEvent(run_interval_ticks - cycles_late, event);
 }

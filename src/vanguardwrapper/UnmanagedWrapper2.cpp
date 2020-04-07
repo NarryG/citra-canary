@@ -1,7 +1,8 @@
 #pragma once
 
+#include <qapplication.h>
 #include "UnmanagedWrapper.h"
-#include "main.h"
+#include "citra_qt/main.h"
 
 //C++/CLI has various restrictions (no std::mutex for example), so we can't actually include certain headers directly
 //What we CAN do is wrap those functions
