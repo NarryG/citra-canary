@@ -214,6 +214,7 @@ System::ResultStatus System::SingleStep() {
 }
 
 System::ResultStatus System::Load(Frontend::EmuWindow& emu_window, const std::string& filepath) {
+    FileUtil::SetCurrentRomPath(filepath);
     app_loader = Loader::GetLoader(filepath);
     if (!app_loader) {
         LOG_CRITICAL(Core, "Failed to obtain loader for {}!", filepath);
@@ -533,6 +534,16 @@ void System::Reset() {
 
 template <class Archive>
 void System::serialize(Archive& ar, const unsigned int file_version) {
+    if (Archive::is_loading::value) {
+        // When loading, we want to make sure any lingering state gets cleared out before we begin.
+        // Shutdown, but persist a few things between loads...
+        Shutdown(true);
+
+        // Re-initialize everything like it was before
+        auto system_mode = this->app_loader->LoadKernelSystemMode();
+        auto n3ds_mode = this->app_loader->LoadKernelN3dsMode();
+        Init(*m_emu_window, *system_mode.first, *n3ds_mode.first);
+    }
     u32 num_cores;
     if (Archive::is_saving::value) {
         num_cores = this->GetNumCores();
@@ -564,11 +575,16 @@ void System::serialize(Archive& ar, const unsigned int file_version) {
 
     ar&* memory.get();
     ar&* kernel.get();
+    VideoCore::serialize(ar, file_version);
+    if (file_version >= 1) {
+        ar& Movie::GetInstance();
+    }
 
     // This needs to be set from somewhere - might as well be here!
     if (Archive::is_loading::value) {
         Service::GSP::SetGlobalModule(*this);
         memory->SetDSP(*dsp_core);
+        cheat_engine->Connect();
     }
 }
 

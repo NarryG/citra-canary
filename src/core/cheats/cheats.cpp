@@ -22,6 +22,10 @@ constexpr u64 run_interval_ticks = BASE_CLOCK_RATE_ARM11 / 60;
 CheatEngine::CheatEngine(Core::System& system_) : system(system_) {
     LoadCheatFile();
     LOG_ERROR(Core, "Registering cheat event");
+    Connect();
+}
+
+void CheatEngine::Connect() {
     event = system.CoreTiming().RegisterEvent(
         "CheatCore::run_event",
         [this](u64 thread_id, s64 cycle_late) { RunCallback(thread_id, cycle_late); });
