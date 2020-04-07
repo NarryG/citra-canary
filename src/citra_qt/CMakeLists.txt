@@ -162,6 +162,8 @@ add_executable(citra-qt
     util/util.h
 )
 
+SET_TARGET_PROPERTIES(citra-qt PROPERTIES LINK_FLAGS "/CLRTHREADATTRIBUTE:STA")
+
 if (ENABLE_FFMPEG_VIDEO_DUMPER)
     target_sources(citra-qt PRIVATE
         dumping/dumping_dialog.cpp
